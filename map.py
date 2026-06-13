@@ -4,6 +4,7 @@
 from typing import Optional, Dict, List
 from zones import Zone
 from connections import Connection
+from collections import deque
 
 
 class Map:
@@ -50,7 +51,7 @@ class Map:
 
     def get_available_routes(self, zone_name: str) -> list:
         """
-        Returns a list of tuples (neighbour_name, objeto_connection_object)
+        Returns a list of tuples (neighbour_name, connection_object)
         only if connection has free space at this moment.
         """
         available = []
@@ -66,12 +67,9 @@ class Map:
 
     def find_shortest_route(self, start: str, end: str) -> list:
         """
-        Calculates the better path with lesss steps from origin to goal
+        Calculates the better path with less steps from origin to goal
         using BFS clasical algorithm (Breadth-First Search).
-        Returns a list with zones names to follow.
-        """
-        from collections import deque
-
+        Returns a list with zones names to follow."""
         if start not in self.zones or end not in self.zones:
             return []
 

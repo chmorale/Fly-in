@@ -1,32 +1,25 @@
-1. Representación del Grafo (Estructura de Datos)
-Para que los drones puedan moverse, necesitas que tu objeto Map entienda las conexiones como un Grafo (nodos = zonas, aristas = conexiones).
+Opción 1: El archivo parser.py (o la clase Map)
+Revisar cómo se construye el objeto map_obj a partir de my_map.txt. Es crucial asegurarnos de que:
 
-Asegúrate de que tu clase Map (o Zone) tenga un método para obtener las zonas vecinas. Por ejemplo: map_obj.get_neighbors(zone_name).
+map_obj.connections sea un diccionario estructurado como {"ZONA_ORIGEN": [lista_de_conexiones]} para que el bucle for conn in map_obj.connections[drone.current_zone] funcione sin lanzar errores.
 
-Como las conexiones tienen un max_link_capacity, el grafo debe ser capaz de trackear cuántos drones están cruzando esa conexión al mismo tiempo.
+El método map_obj.find_shortest_route() devuelva correctamente una lista o un iterador con el camino óptimo.
 
-2. El Motor de la Simulación (El "Loop" Principal)
-El proyecto Flyin se basa en turnos o ciclos de tiempo. Necesitas crear una clase constructora de la simulación (por ejemplo, Simulation o Engine) que maneje el bucle principal:
+Opción 2: La clase Drone
+Verificar la lógica interna de los métodos que llamamos en el main.py, en especial:
 
-Condición de parada: El bucle termina cuando todos los drones hayan llegado al end_hub.
+drone.get_next_target_zone(): ¿Cómo sabe cuál es la siguiente zona? (¿Tiene un índice que avanza en la ruta calculada?).
 
-Cada turno del bucle: 1. Cada dron decide su siguiente paso (moverse a una zona vecina o quedarse quieto).
-2. Se validan las restricciones (capacidad máxima de la zona, capacidad de la conexión).
-3. Se actualiza el estado del mapa.
-4. Se imprime o registra el movimiento del turno (esencial para el trace o el visualizer de 42).
+drone.move_to(next_zone): ¿Cambia internamente su current_zone y actualiza su estado a "arrived" si ha alcanzado la última zona de la ruta?
 
-3. El Algoritmo de Enrutamiento (Pathfinding)
-Este es el núcleo del proyecto. ¿Cómo van a viajar los drones del punto A al punto B sin colisionar ni colapsar las rutas?
+Opción 3: La clase Connection
+Asegurar que los métodos de control de tráfico y capacidad funcionen bien:
 
-Paso 1 (Básico): Implementa BFS (Breadth-First Search) o Dijkstra para encontrar el camino más corto desde start_hub hasta end_hub para un solo dron.
+conn.has_space(): ¿Resta la capacidad máxima menos los drones actualmente en tránsito?
 
-Paso 2 (Avanzado/Gestión de Tráfico): Si mandas todos los drones por el camino más corto, saturarás el max_link_capacity de las conexiones o el max_drones de las zonas. Tendrás que implementar:
+conn.enter_connection() y conn.exit_connection(): ¿Suman y restan correctamente los contadores de ocupación?
 
-Rutas alternativas para turnos simultáneos.
-
-Retrasos controlados (hacer que un dron espere en una zona si la siguiente conexión está llena).
-
-Flujo máximo (conceptos tipo Edmonds-Karp o Ford-Fulkerson si el proyecto se vuelve muy estricto con la optimización de tiempo).
+====================================================================
 
 4. Output y Verificación
 Los proyectos de 42 suelen requerir un formato de salida muy específico por la salida estándar (stdout) para que el corrector automático (o el visualizador) funcione.

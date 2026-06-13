@@ -53,13 +53,13 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
                     #  y la siguiente
                     # (Buscamos en las conexiones de la zona actual del dron)
                     current_connection = None
-                    for conn in map_obj.connections[drone.current_zone]:
-                        dest_zone = conn.get_destination_from(
-                            drone.current_zone
-                        )
-                        if dest_zone == next_zone:
-                            current_connection = conn
-                            break
+                    if drone.current_zone in map_obj.connections:
+                        for conn in map_obj.connections[drone.current_zone]:
+                            if conn.get_destination_from(
+                                drone.current_zone
+                            ) == next_zone:
+                                current_connection = conn
+                                break
 
                     # Verificamos si la conexión física
                     # tiene espacio disponible
@@ -81,7 +81,7 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
                         #  si consideramos movimientos instantáneos por turno
                         current_connection.exit_connection()
 
-                        print(f"  -> Drone {drone.id_dron} moved to"
+                        print(f"  -> Drone {drone.id_dron} moved to "
                               f"{next_zone} (Status: {drone.status})")
                     else:
                         # Si la conexión está saturada,

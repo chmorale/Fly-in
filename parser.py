@@ -20,7 +20,7 @@ def options(text: str) -> dict:
 def parser(filepath: str) -> Map | None:
     map_obj: Map = Map()
     nb_drones = 0
-    start_zone = None
+    # start_zone = None
     try:
         with open(filepath) as f:
             for line in f:
@@ -118,7 +118,7 @@ def parser(filepath: str) -> Map | None:
                         map_obj.add_zone(zona)
                         # instanciar zona
         # instanciar drones
-        if nb_drones > 0 and not start_zone:
+        if nb_drones > 0 and not map_obj.start_zone:
             raise ValueError("No se ha definido una zona de salida "
                              "('start_hub') para los drones.")
 
@@ -139,6 +139,9 @@ def parser(filepath: str) -> Map | None:
         for i in range(1, nb_drones + 1):
             nuevo_dron = Drone(f"D{i}", map_obj.start_zone)
             map_obj.add_drone(nuevo_dron)
+
+        start_zone_obj = map_obj.get_zone(map_obj.start_zone)
+        start_zone_obj.current_drones = nb_drones
 
     except FileNotFoundError:
         print(f"ERROR: El archivo '{filepath}' no existe.")

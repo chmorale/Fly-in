@@ -3,7 +3,7 @@
 from typing import Optional, List
 
 
-class Drone():
+class Drone:
     def __init__(
         self,
         id_dron: str,
@@ -28,7 +28,7 @@ class Drone():
         if route_list and len(route_list) > 1:
             self.final_destination = route_list[-1]
 
-    def get_next_target_zone(self) -> str | None:
+    def get_next_target_zone(self) -> Optional[str]:
         """
         Devuelve cuál es la siguiente zona a la que debe moverse el dron según
         su ruta.

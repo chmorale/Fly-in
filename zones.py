@@ -11,7 +11,8 @@ class Zone():
         zone_type: Optional[str] = None,
         zone_color: Optional[str] = None,
         max_drones: Optional[int] = None,
-        zone_access: str = "normal"
+        zone_access: str = "normal",
+        current_drones: int = 0
     ):
         self.zone_name = zone_name
         self.coordinates = coordinates
@@ -19,3 +20,19 @@ class Zone():
         self.zone_color = zone_color
         self.max_drones = max_drones
         self.zone_access = zone_access
+        self.current_drones = current_drones
+
+    def has_space(self) -> bool:
+        if self.max_drones is None:
+            return True
+        else:
+            if self.current_drones >= self.max_drones:
+                return False
+        return True
+
+    def enter_zone(self):
+        self.current_drones += 1
+
+    def exit_zone(self):
+        if self.current_drones > 0:
+            self.current_drones -= 1

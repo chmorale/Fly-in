@@ -3,7 +3,7 @@
 from typing import Optional
 
 
-class Connection():
+class Connection:
     def __init__(self,
                  zone1: str,
                  zone2: str,
