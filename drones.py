@@ -9,7 +9,7 @@ class Drone():
         id_dron: str,
         start_zone: Optional[str] = None
     ):
-        self.id_drone = id_dron
+        self.id_dron = id_dron
         self.start_zone = start_zone
         self.current_zone = start_zone
         self.final_destination: Optional[str] = None
@@ -25,6 +25,30 @@ class Drone():
     def set_route(self, route_list: list):
         """Asign the calculated route by the algorithm"""
         self.route = route_list
+        if route_list and len(route_list) > 1:
+            self.final_destination = route_list[-1]
+
+    def get_next_target_zone(self) -> str | None:
+        """
+        Devuelve cuál es la siguiente zona a la que debe moverse el dron según
+        su ruta.
+        Si ya está en el destino o no tiene ruta, devuelve None.
+        """
+        if (
+            not self.route
+            or not self.current_zone
+            or self.current_zone == self.final_destination
+        ):
+            return None
+
+        try:
+            # Buscamos la posición actual en la ruta precalculada
+            current_index = self.route.index(self.current_zone)
+            # El objetivo es el siguiente índice
+            return self.route[current_index + 1]
+        except ValueError:
+            # Si por algún motivo el dron se desvió de su ruta planificada
+            return None
 
     def get_movement_options(self, map_obj) -> list:
         """Ask the maps for available neighbor zones"""
@@ -41,18 +65,3 @@ class Drone():
             self.status = "arrived"
         else:
             self.status = "in_transit"
-
-
-
-
-
-
-
-
-"""
-posición actual (una Zone)
-estado (idle, moving, delivering…)
-destino
-ruta
-capacidad de movimiento
-historial de zonas visitadas"""

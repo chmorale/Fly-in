@@ -70,7 +70,8 @@ def parser(filepath: str) -> Map | None:
                 # procesar zonas
                     elif key in ("start_hub", "hub", "end_hub"):
                         color = None
-                        zone_type = None
+                        zone_type = key
+                        zone_access = "normal"
                         max_drones = None
                         before, _, after = text_value.partition("[")
                         before = before.strip()
@@ -81,15 +82,29 @@ def parser(filepath: str) -> Map | None:
                                              "definición de la zona: "
                                              f"'{before}'")
                         zone_name = text_values[0]
-                        start_x = int(text_values[1])
-                        start_y = int(text_values[2])
+
+                        try:
+                            start_x = int(text_values[1])
+                            start_y = int(text_values[2])
+                        except ValueError:
+                            raise ValueError("Las coordenadas de la zona '"
+                                             f"{zone_name}' deben ser números"
+                                             " enteros válidos. Encontrado: "
+                                             f"x='{text_values[1]}', "
+                                             f"y='{text_values[2]}'")
+                        if zone_name in map_obj.zones:
+                            raise ValueError(f"La zona '{zone_name}' ya ha "
+                                             "sido definida previamente. No se"
+                                             " permiten nombres duplicados en "
+                                             "el mapa.")
+
                         if after:
                             inside = after.replace("]", "").strip()
                             optional_values = options(inside)
                             if "color" in optional_values:
                                 color = optional_values["color"]
                             if "zone" in optional_values:
-                                zone_type = optional_values["zone"]
+                                zone_access = optional_values["zone"]
                             if "max_drones" in optional_values:
                                 max_drones = int(optional_values["max_drones"])
 
@@ -97,7 +112,8 @@ def parser(filepath: str) -> Map | None:
                                     (start_x, start_y),
                                     zone_type,
                                     color,
-                                    max_drones
+                                    max_drones,
+                                    zone_access
                                     )
                         map_obj.add_zone(zona)
                         # instanciar zona
@@ -110,11 +126,18 @@ def parser(filepath: str) -> Map | None:
             raise ValueError("El número de drones ('nb_drones')"
                              " debe ser mayor que cero.")
 
-        assert start_zone is not None
+        if not map_obj.start_zone:
+            raise ValueError("No se ha definido ninguna zona de "
+                             "salida ('start_hub'). Es obligatoria "
+                             "para posicionar los drones.")
+
+        if not map_obj.end_zone:
+            raise ValueError("No se ha definido ninguna zona de "
+                             "llegada ('end_hub'). Es obligatoria "
+                             "para conocer el destino de la simulación.")
 
         for i in range(1, nb_drones + 1):
-            nuevo_dron = Drone(f"D{i}", start_zone) 
-            # drones_lista.append(nuevo_dron)
+            nuevo_dron = Drone(f"D{i}", map_obj.start_zone)
             map_obj.add_drone(nuevo_dron)
 
     except FileNotFoundError:
@@ -134,4 +157,3 @@ def parser(filepath: str) -> Map | None:
         return None
 
     return map_obj
-
