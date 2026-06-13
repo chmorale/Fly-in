@@ -1,0 +1,170 @@
+1. Representación del Grafo (Estructura de Datos)
+Para que los drones puedan moverse, necesitas que tu objeto Map entienda las conexiones como un Grafo (nodos = zonas, aristas = conexiones).
+
+Asegúrate de que tu clase Map (o Zone) tenga un método para obtener las zonas vecinas. Por ejemplo: map_obj.get_neighbors(zone_name).
+
+Como las conexiones tienen un max_link_capacity, el grafo debe ser capaz de trackear cuántos drones están cruzando esa conexión al mismo tiempo.
+
+2. El Motor de la Simulación (El "Loop" Principal)
+El proyecto Flyin se basa en turnos o ciclos de tiempo. Necesitas crear una clase constructora de la simulación (por ejemplo, Simulation o Engine) que maneje el bucle principal:
+
+Condición de parada: El bucle termina cuando todos los drones hayan llegado al end_hub.
+
+Cada turno del bucle: 1. Cada dron decide su siguiente paso (moverse a una zona vecina o quedarse quieto).
+2. Se validan las restricciones (capacidad máxima de la zona, capacidad de la conexión).
+3. Se actualiza el estado del mapa.
+4. Se imprime o registra el movimiento del turno (esencial para el trace o el visualizer de 42).
+
+3. El Algoritmo de Enrutamiento (Pathfinding)
+Este es el núcleo del proyecto. ¿Cómo van a viajar los drones del punto A al punto B sin colisionar ni colapsar las rutas?
+
+Paso 1 (Básico): Implementa BFS (Breadth-First Search) o Dijkstra para encontrar el camino más corto desde start_hub hasta end_hub para un solo dron.
+
+Paso 2 (Avanzado/Gestión de Tráfico): Si mandas todos los drones por el camino más corto, saturarás el max_link_capacity de las conexiones o el max_drones de las zonas. Tendrás que implementar:
+
+Rutas alternativas para turnos simultáneos.
+
+Retrasos controlados (hacer que un dron espere en una zona si la siguiente conexión está llena).
+
+Flujo máximo (conceptos tipo Edmonds-Karp o Ford-Fulkerson si el proyecto se vuelve muy estricto con la optimización de tiempo).
+
+4. Output y Verificación
+Los proyectos de 42 suelen requerir un formato de salida muy específico por la salida estándar (stdout) para que el corrector automático (o el visualizador) funcione.
+
+Revisa el enunciado para ver cómo debes imprimir cada movimiento (ej: T1: D1-ZoneA D2-ZoneB).
+
+¿Qué parte de la lógica del mapa o del algoritmo de movimiento tienes pensado implementar primero?
+
+====================
+## 1. Configuración Inicial del Entorno y Normas Generales
+
+**Lenguaje:** Asegurar el uso de **Python 3.10 o posterior**.
+
+**Paradigma:** El proyecto debe ser **100% orientado a objetos (POO)**.
+
+**Librerías Prohibidas:** No utilices ninguna librería que ayude con la lógica de grafos (como `networkx` o `graphlib`). Tienes que programar la lógica del grafo tú mismo.
+
+* **Calidad de Código y Tipado:**
+* Es obligatorio que el proyecto sea completamente *typesafe* usando **type hints**.
+
+* Debe pasar el linter `flake8` y el verificador estático `mypy` sin errores.
+
+* Incluir docstrings en funciones y clases siguiendo la norma PEP 257 (estilo Google o NumPy).
+
+* Manejar excepciones de manera robusta (`try-except`) y usar gestores de contexto (`with`) para recursos como archivos.
+
+---
+
+## 2. Automatización con el `Makefile`
+
+Debes crear un archivo `Makefile` en la raíz con las siguientes reglas obligatorias:
+
+`install`: Instala las dependencias del proyecto usando `pip`, `uv` o `pipx`.
+
+`run`: Ejecuta el script principal del simulador.
+
+ 
+`debug`: Ejecuta el script en modo depuración (ej. usando `pdb`).
+
+`clean`: Borra archivos temporales y cachés (como `__pycache__` o `.mypy_cache`).
+
+`lint`: Ejecuta los comandos estrictos de verificación: `flake8` y los flags de `mypy` definidos en el sujeto.
+
+---
+
+## 3. Desarrollo del Software (Módulo a Módulo)
+
+El simulador se compone principalmente de cuatro piezas que debes programar colocando los archivos en la raíz del repositorio:
+
+A. El Parser de Mapas 
+
+* Leer archivos de configuración de zonas donde la primera línea indica `nb_drones: <entero>`.
+
+* Validar que exista **exactamente un** `start_hub` (inicio) y **un** `end_hub` (fin).
+
+* Procesar los nombres de zonas (sin espacios ni guiones) , sus coordenadas enteras y metadatos opcionales como `zone`, `color`, `max_drones` y `max_link_capacity`.
+
+* Lanzar errores claros de parsing indicando la línea y la causa si el archivo tiene un formato inválido o tipos de zona incorrectos.
+
+B. El Motor de Simulación (Reglas de Negocio) 
+
+**Estados de Zona:** Implementar la lógica para zonas `normal` (costo 1 turno) , `restricted` (costo 2 turnos) , `priority` (priorizadas en ruta) y `blocked` (inaccesibles).
+
+**Capacidades:** Controlar turno por turno que ninguna zona supere su `max_drones`  (salvo la salida y la meta, que tienen capacidad ilimitada) y que las conexiones respeten su `max_link_capacity`.
+
+**Mecánica de Tránsito:** Si un dron entra a una zona `restricted`, tarda 2 turnos. Durante el tránsito ocupa la conexión y **debe** aterrizar en el siguiente turno obligatoriamente (no puede quedarse esperando en la conexión si la zona destino se llena).
+
+* Los drones que se mueven liberan espacio en la zona de origen en el mismo turno en el que salen.
+
+
+C. El Algoritmo de Enrutamiento (Pathfinding) 
+
+* Diseñar una estrategia capaz de distribuir la flota de drones a través de múltiples caminos simultáneamente para maximizar el flujo.
+
+* Gestionar esperas estratégicas de los drones en zonas intermedias cuando los caminos adelante estén colapsados.
+
+**Objetivo de optimización:** Conseguir llevar todos los drones a la meta en la menor cantidad de turnos totales posibles respetando los benchmarks del sujeto  (Ej. mapas fáciles $\le$ 10 turnos, medianos 10-30 turnos, difíciles $\le$ 60 turnos) .
+
+
+D. Salida de Datos y Visualización 
+
+**Formato Log:** Imprimir por consola línea por línea cada turno de simulación detallando únicamente los drones que se mueven con el formato `D<ID>-<zona>` (o `D<ID>-<conexion>` si va a una zona restringida).
+
+**Representación Visual:** Crear una interfaz gráfica (GUI) o una salida de terminal coloreada para mostrar en tiempo real la posición de los drones y el estado de las zonas.
+
+---
+
+## 4. Documentación Obligatoria (`README.md`)
+
+Debes crear un archivo `README.md` en inglés en la raíz del repositorio que contenga rigurosamente:
+
+**Primera línea obligatoria (en cursiva):** `This project has been created as part of the 42 curriculum by <chmorale>.` 
+
+**Sección Description:** Presentación y metas del proyecto.
+
+**Sección Instructions:** Instrucciones de instalación, compilación y ejecución.
+
+**Sección Resources:** Referencias utilizadas y **declarar de forma explícita cómo se utilizó la IA** (para qué tareas y en qué partes del proyecto).
+
+**Sección de Algoritmos:** Explicación detallada de las decisiones tomadas para el algoritmo de guiado.
+
+**Sección de Visualización:** Explicar cómo funciona el sistema gráfico/colores implementado.
+
+---
+
+## 5. Preparación para la Defensa (Peer-Review)
+
+**Entender todo el código:** Durante la evaluación tus compañeros te pedirán que justifiques tus decisiones de diseño.
+
+**Prueba de modificación en vivo:** El sujeto advierte que los evaluadores te pueden pedir escribir o reescribir pequeñas porciones de código en pocos minutos para demostrar que realmente entiendes tu programa y asegurar tu nota. ¡Ve bien preparado para codificar en caliente! 
+
+++++++++++++++++++
+
+1. Estructuras de Datos Clave (El Estado del Mundo)Para gestionar el motor paso a paso, tu simulación necesita mantener un estado dinámico en cada turno $t$. Te recomiendo modelarlo con las siguientes variables:Ocupación de Zonas (dict o map): zona_id -> lista_de_drones_actuales.Nota: Las zonas de salida y meta ignoran el límite max_drones.Ocupación de Conexiones (dict o map): (origen, destino) -> lista_de_drones_en_transito.Estado de los Drones: Cada dron debe tener un estado interno:posicion_actual (Zona ID o Conexión ID).turnos_restantes_en_transito (0 si está asentado en una zona, 1 o 2 si se está moviendo).ruta_planificada (Lista de zonas que le quedan por visitar).2. Ampliación de las Reglas de NegocioB.1. Estados de Zona y Algoritmo de EnrutamientoEl tipo de zona no solo afecta al movimiento en tiempo real, sino a cómo los drones calculan (o recalculan) sus rutas:normal / restricted: Tienen un "peso" o costo de $1$ y $2$ turnos respectivamente. Si usas un algoritmo como Dijkstra o A* para buscar la ruta óptima de un dron, la zona restricted debe tener el doble de costo de arista/nodo que la normal.priority: Estas zonas actúan con "costo reducido" o incluso "costo cero/negativo simulado" para el algoritmo de enrutamiento, obligando al sistema a preferirlas si están en el radar, ya que se consideran vías rápidas o corredores seguros.blocked: Para el motor de búsqueda de rutas, estas zonas no existen (costo infinito). Si una zona se bloquea dinámicamente durante la simulación, los drones que se dirijan a ella deben recalcular su ruta inmediatamente.B.2. Mecánica de Tránsito y el "Efecto Embudo"La regla de que una zona restricted tarde 2 turnos introduce el concepto de drones flotantes (en tránsito).Turno $t$ (Inicio de movimiento): El dron sale de la Zona A (liberando espacio en A instantáneamente) y entra a la conexión hacia la Zona B (restricted). Su contador turnos_restantes se setea en 2.Turno $t+1$ (Mitad del tránsito): El dron sigue en la conexión. Su contador baja a 1. Sigue ocupando capacidad en la conexión max_link_capacity.Turno $t+2$ (Aterrizaje obligatorio): El dron debe entrar a la Zona B. Aquí su contador llega a 0.⚠️ El Caso de Borde Crítico: Como el aterrizaje es obligatorio (no puede quedarse flotando en la conexión), el motor de simulación no puede permitir que un dron inicie el viaje hacia B en el turno $t$ si prevé que en el turno $t+2$ la zona B estará llena.B.3. El Orden de Ejecución por Turno (Fases de la Simulación)Para evitar condiciones de carrera (por ejemplo, que un dron intente entrar a una zona antes de que otro salga, causando un falso lleno), cada turno del motor de simulación debe seguir un orden estricto de fases:[Inicio del Turno]
+       │
+       ▼
+1. Liberación de Espacio  ──► Mueve drones que llegaron a su destino.
+       │                      Libera capacidades de origen.
+       ▼
+2. Actualización Tránsito ──► Reduce en 1 los turnos de drones en conexiones.
+       │                      Aterriza a los que llegaron a 0.
+       ▼
+3. Resolución de Conflictos ─► Evalúa drones que quieren moverse en este turno.
+       │                      Aplica prioridades si hay colisión por espacio.
+       ▼
+4. Movimiento e Ingreso   ──► Mueve drones aprobados a las conexiones.
+       │                      Reduce capacidades.
+       ▼
+[Fin del Turno]
+Fase de Salida/Liberación: Los drones que se mueven en este turno liberan su espacio en la zona de origen de manera inmediata.Fase de Avance de Tránsito: Se actualizan los drones que ya estaban en conexiones. Los que llegan a su destino final de tramo (contador = 0) se asientan en la zona de destino.Fase de Evaluación de Movimiento (Resolución de Conflictos): Para los drones que quieren iniciar un movimiento en este turno, el motor debe validar:¿Tiene la conexión espacio disponible (max_link_capacity)?¿Tendrá la zona destino espacio disponible (max_drones) en el turno exacto en que el dron termine su tránsito?Fase de Ejecución de Movimiento: Se autoriza el movimiento, se descuentan las capacidades y el dron pasa al estado "en tránsito".3. Consejos para la ImplementaciónLook-Ahead (Previsión de Capacidad): Para la regla de zonas restringidas, tu matriz o diccionario de ocupación no solo debe saber cuántos drones hay hoy, sino cuántos drones tienen reservado su derecho a aterrizar en el turno $t+2$. Llevar un "calendario de ocupación futura" por zona te evitará romper la regla del aterrizaje obligatorio.Políticas de Desempate (Gobernanza): ¿Qué pasa si dos drones quieren entrar a la misma zona en el mismo turno pero solo queda un lugar? Debes definir un criterio de desempate en el motor de simulación (por ejemplo: prioridad por ID de dron, el que tenga la ruta más larga, o el que venga de una zona priority).
+
+==========================
+
+Para estructurar el Motor de Simulación en código (siguiendo un enfoque de Programación Orientada a Objetos), necesitas modelar los componentes del sistema de forma que respeten el flujo por turnos y las restricciones de capacidad.Dado que tu objetivo es implementar estas reglas de negocio, aquí tienes una propuesta clara de las clases y métodos principales que deberías crear tras la etapa del parser.1. Clase DroneRepresenta a cada agente individual dentro de la simulación. Mantiene su propio estado y sabe cuál es su camino.Atributos:id (String/Int): Identificador único del dron.ruta (List): Lista de IDs de zonas que debe recorrer (['Z1', 'Z2', 'Z3']).indice_ruta (Int): Posición actual dentro de su lista de ruta.turnos_restantes_transito (Int): Contador para el movimiento. 0 si está asentado; 1 o 2 si está cruzando una conexión.Métodos:obtener_zona_actual(): Devuelve la zona donde se encuentra (o la zona origen si está moviéndose).obtener_siguiente_zona(): Mira en la ruta cuál es el siguiente paso sin avanzar el índice todavía.avanzar_paso(): Incrementa el indice_ruta cuando inicia un viaje.decrementar_transito(): Resta 1 al contador de turnos en movimiento. Devuelve True si ya llegó a su destino (llegó a 0).2. Clase ZonaRepresenta los nodos del mapa. Controla sus restricciones físicas y su ocupación en tiempo real.Atributos:id (String): Identificador (ej. 'Z1').tipo (String): 'normal', 'restricted', 'priority' o 'blocked'.max_drones (Int): Capacidad máxima (infinito si es salida o meta).drones_actuales (Set/List): Drones que están físicamente asentados aquí en el turno actual.reservas_futuras (Dict): Un mapa de turno -> cantidad_de_drones. Sirve para el Look-Ahead (saber cuántos drones aterrizarán obligatoriamente aquí en turnos posteriores).Métodos:tiene_espacio_disponible(turno_llegada): Verifica si la suma de drones_actuales (restando los que se van) + las reservas_futuras en ese turno específico es menor que max_drones.reservar_espacio(turno_llegada): Incrementa el contador de reservas para ese turno.agregar_dron(dron): Añade el dron al conjunto de ocupación real.remover_dron(dron): Libera el espacio inmediatamente cuando el dron sale.3. Clase Conexion (o Link)Representa las aristas del mapa que conectan las zonas.Atributos:origen (String): ID de la zona de salida.destino (String): ID de la zona de llegada.max_link_capacity (Int): Capacidad máxima de la conexión por turno.drones_en_transito (List/Set): Drones que se encuentran actualmente viajando por este enlace.Métodos:esta_llena(): Devuelve True si el número de drones en tránsito es igual o mayor a max_link_capacity.admitir_dron(dron): Añade el dron al canal de tránsito.liberar_dron(dron): Remueve al dron una vez termina su tiempo de viaje.4. Clase MotorSimulacion (El Orquestador)Es la clase maestra que corre el bucle principal, recibe los datos del parser y maneja el reloj global.Atributos:mapa_zonas (Dict): Diccionario de id_zona -> Objeto Zona.mapa_conexiones (Dict): Diccionario de (origen, destino) -> Objeto Conexion.lista_drones (List): Todos los objetos Drone del sistema.turno_actual (Int): El reloj global del sistema (empieza en 0 o 1).Métodos Principales:inicializar_simulacion(datos_parser): Instancia las zonas, conexiones y drones con la información procesada del archivo de entrada.ejecutar(): El bucle while principal. Corre turno por turno hasta que todos los drones estén en la meta o se detecte un bloqueo total (deadlock).ejecutar_turno(): Coordina las fases del turno en el orden estricto que vimos antes:Llama a actualizar los tránsitos y procesa los aterrizajes.Almacena las intenciones de movimiento de los drones asentados.Resuelve conflictos de capacidad y autoriza movimientos.Incrementa turno_actual.evaluar_movimiento(dron): Aplica las reglas de negocio. Mira la zona destino y la conexión. Si la conexión tiene cupo y la zona destino tiene espacio garantizado en el turno en que el dron terminará de cruzar (según si es normal o restricted), devuelve True.generar_reporte(): Exporta los resultados finales (turnos totales, logs por turno) una vez finalizada la ejecución.Ejemplo visual de cómo interactúan las clases:[MotorSimulacion]
+   │
+   ├──> [Drone 1, Drone 2...] ─── (Consultan sus rutas)
+   │
+   ├──> [Zona A, Zona B...]   ─── (Validan capacidades y tipos: normal/restricted)
+   │
+   └──> [Conexion A->B]       ─── (Controla el flujo max_link_capacity)
+El truco de diseño para tu código:Cuando un dron quiere moverse de Zona A (normal) a Zona B (restringida, costo 2 turnos) en el Turno 5:El Motor calcula: El dron llegará en el Turno 7 ($5 + 2$).El Motor le pregunta a Zona B: tiene_espacio_disponible(turno_llegada=7).Si responde sí, el Motor ejecuta:Zona B.reservar_espacio(turno_llegada=7)Zona A.remover_dron(dron) (liberación inmediata).Conexion.admitir_dron(dron) con turnos_restantes_transito = 2.

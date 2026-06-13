@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
-from zones.py import Zone
+from typing import Optional
+
 
 class Connection():
-    def __init__(self, zona_a:Zone, zona_b:Zone, max_capacity: int):
-        self.zona_a=zona_a
-        self.zona_b=zona_b
-        self.max_capacity=max_capacity
-
+    def __init__(self,
+                 zone1: str,
+                 zone2: str,
+                 max_capacity: Optional[int] = None):
+        self.zone1 = zone1
+        self.zone2 = zone2
+        self.max_capacity = max_capacity
