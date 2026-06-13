@@ -3,7 +3,7 @@
 from typing import Optional
 
 
-class Zone():
+class Zone:
     def __init__(
         self,
         zone_name: str,
@@ -23,16 +23,16 @@ class Zone():
         self.current_drones = current_drones
 
     def has_space(self) -> bool:
+        """Verify if zone has capacity enough for more drones"""
         if self.max_drones is None:
             return True
-        else:
-            if self.current_drones >= self.max_drones:
-                return False
-        return True
+        return self.current_drones < self.max_drones
 
     def enter_zone(self):
+        """Adds a new drone to the zone"""
         self.current_drones += 1
 
     def exit_zone(self):
+        """Delete a drone from the zone"""
         if self.current_drones > 0:
             self.current_drones -= 1
