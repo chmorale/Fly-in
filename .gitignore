@@ -1,0 +1,31 @@
+# Cache de compilación intermedia de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Filtros para herramientas de tipado estático y linters (Mypy y Pytest)
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Entornos virtuales locales (por si aíslas tus librerías)
+env/
+venv/
+.env/
+.venv/
+ENV/
+bin/
+lib/
+include/
+
+# Archivos de configuración de editores de código (VS Code, PyCharm, etc.)
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Archivos de logs de simulación o mapas temporales de prueba que tú crees
+*.log
+text_outputs/

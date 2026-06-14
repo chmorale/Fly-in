@@ -5,7 +5,7 @@
 # Variables de entorno y ejecutables
 PYTHON   = python3
 PIP      = pip3
-MAIN     = main.py
+MAIN     = fly-in.py
 SRC_DIR  = .
 
 # Regla por defecto (ejecuta el linter y luego el simulador)

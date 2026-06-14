@@ -7,6 +7,14 @@ import time
 
 map_obj = parser("my_map.txt")
 
+COLORS = {
+    "reset": "\033[0m",
+    "red": "\033[91m",     # Para zonas bloqueadas o saturadas
+    "green": "\033[92m",   # Para zonas con mucha capacidad libre
+    "yellow": "\033[93m",  # Para zonas restringidas
+    "blue": "\033[94m"     # Para drones en tránsito
+}
+
 if map_obj and map_obj.start_zone and map_obj.end_zone:
 
     # 1. Verificación inicial de conectividad física en el mapa
@@ -46,7 +54,9 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
                 break
 
             tick += 1
-            os.system('clear' if os.name != 'nt' else 'cls')
+            # os.system('clear' if os.name != 'nt' else 'cls')
+            # print("\n" * 50)
+            print("\033[2J\033[H", end="")
 
             print("==================================================")
             print(f"  SIMULATION STATUS - TICK {tick}                 ")
@@ -65,9 +75,15 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
                     bar = "████████████████████"
                     cap_str = f"{curr}/∞"
                 else:
-                    filled_length = int(round(20 * curr / mx)) if mx > 0 else 0
-                    filled_length = min(filled_length, 20)
-                    bar = "█" * filled_length + "░" * (20 - filled_length)
+                    ratio = curr / mx if mx else 0
+                    color = COLORS["red"] if ratio > 0.8 else COLORS["green"]
+
+                    filled_length = min(int(round(20 * ratio)), 20)
+
+                    bar = (
+                        f"{color}{'█' * filled_length}{COLORS['reset']}"
+                        f"{'░' * (20 - filled_length)}"
+                    )
                     cap_str = f"{curr}/{mx}"
 
                 z_type = (
@@ -77,6 +93,9 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
                 )
                 prefix = f"[{z_type.upper()}]"
                 print(f"{prefix:<13} {zone_name:<12}: [{bar}] {cap_str}")
+
+            import sys
+            sys.stdout.flush()
 
             print("\n[ACTIVE DRONES STATUS]")
             for drone_id, drone in map_obj.drones.items():
@@ -186,4 +205,5 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
                       "La simulación se ha colapsado.")
                 break
 
+            sys.stdout.flush()
             time.sleep(1.0)
