@@ -147,6 +147,14 @@ def parser(filepath: str) -> Map | None:
         start_zone_obj.current_drones = nb_drones
         map_obj.nb_drones = nb_drones
 
+        map_obj.min_x = min(z.coordinates[0] for z in map_obj.zones.values())
+
+        map_obj.max_x = max(z.coordinates[0] for z in map_obj.zones.values())
+
+        map_obj.min_y = min(z.coordinates[1] for z in map_obj.zones.values())
+
+        map_obj.max_y = max(z.coordinates[1] for z in map_obj.zones.values())
+
     except FileNotFoundError:
         print(f"ERROR: El archivo '{filepath}' no existe.")
         return None

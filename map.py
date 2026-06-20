@@ -15,6 +15,10 @@ class Map:
         self.start_zone: Optional[str] = None
         self.end_zone: Optional[str] = None
         self.nb_drones: int = 0
+        self.min_x: int = 0
+        self.min_y: int = 0
+        self.max_x: int = 0
+        self.max_y: int = 0
 
     def add_zone(self, zone: Zone) -> None:
         if zone.zone_type == "start_hub":
