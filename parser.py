@@ -6,8 +6,20 @@ from drones import Drone
 from connections import Connection
 
 
-def options(text: str) -> dict:
-    values = {}
+VALID_ZONE_TYPES = {"normal", "blocked", "restricted", "priority"}
+
+
+def options(text: str) -> dict[str, str]:
+    """Parse a bracket options block into a key/value dict.
+
+    Args:
+        text: Content inside the bracket block, e.g.
+            'color=green max_drones=2'.
+
+    Returns:
+        Dict mapping option names to their string values.
+    """
+    values: dict[str, str] = {}
     blocks = text.replace(",", " ").split()
 
     for block in blocks:
@@ -18,9 +30,19 @@ def options(text: str) -> dict:
 
 
 def parser(filepath: str) -> Map | None:
+    """Read and validate a map file and return a Map object.
+
+    Args:
+        filepath: Path to the map configuration file.
+
+    Returns:
+        A fully initialised Map, or None if parsing failed.
+    """
     map_obj: Map = Map()
     nb_drones = 0
     line_num = 0
+    seen_connections: set = set()
+    first_data_line = True
     try:
         with open(filepath) as f:
             for idx, line in enumerate(f, start=1):
@@ -34,14 +56,18 @@ def parser(filepath: str) -> Map | None:
                     key = key.strip()
                     text_value = text_value.strip()
 
-                    # Verificar primera línea obligatoria
-                    if idx == 1 and key != "nb_drones":
-                        raise ValueError("La primera línea del archivo debe "
-                                         f"especificar 'nb_drones'. "
-                                         f"Encontrado: '{key}'")
+                    # Verificar primera línea de datos obligatoria
+                    if first_data_line:
+                        first_data_line = False
+                        if key != "nb_drones":
+                            raise ValueError(
+                                "La primera línea de datos debe especificar "
+                                f"'nb_drones'. Encontrado: '{key}'"
+                            )
 
                     if key == "connection":
-                        max_link_capacity = None
+                        max_link_capacity = 1
+                        zone1 = zone2 = ""
                         before, _, after = text_value.partition("[")
                         before = before.strip()
                         text_values = before.split("-")
@@ -56,6 +82,12 @@ def parser(filepath: str) -> Map | None:
                                                  f"conexión '{zone1} - "
                                                  f"{zone2}'"
                                                  " no han sido declaradas.")
+                            pair = frozenset({zone1, zone2})
+                            if pair in seen_connections:
+                                raise ValueError(
+                                    f"Conexión duplicada: '{zone1}-{zone2}'"
+                                )
+                            seen_connections.add(pair)
                         else:
                             raise ValueError("Formato de conexión inválido. "
                                              f"Encontrado: '{before}'")
@@ -66,12 +98,15 @@ def parser(filepath: str) -> Map | None:
                             if "max_link_capacity" in optional_values:
                                 max_link_capacity = int(
                                     optional_values["max_link_capacity"])
+                                if max_link_capacity <= 0:
+                                    raise ValueError(
+                                        "max_link_capacity debe ser un "
+                                        "entero positivo, encontrado: "
+                                        f"'{max_link_capacity}'"
+                                    )
 
-                        text_value = Connection(zone1,
-                                                zone2,
-                                                max_link_capacity
-                                                )
-                        map_obj.add_connection(text_value)
+                        conn = Connection(zone1, zone2, max_link_capacity)
+                        map_obj.add_connection(conn)
 
                     elif key == "nb_drones":
                         nb_drones = int(text_value)
@@ -80,7 +115,11 @@ def parser(filepath: str) -> Map | None:
                         color = None
                         zone_type = key
                         zone_access = "normal"
-                        max_drones = None
+                        # start/end hubs have unlimited capacity
+                        if zone_type in ("start_hub", "end_hub"):
+                            max_drones = None
+                        else:
+                            max_drones = 1
                         before, _, after = text_value.partition("[")
                         before = before.strip()
                         text_values = before.split()
@@ -94,6 +133,10 @@ def parser(filepath: str) -> Map | None:
                         if "-" in zone_name:
                             raise ValueError("El nombre de la zona no puede "
                                              f"contener guiones: '"
+                                             f"{zone_name}'")
+                        if " " in zone_name:
+                            raise ValueError("El nombre de la zona no puede "
+                                             f"contener espacios: '"
                                              f"{zone_name}'")
                         try:
                             start_x = int(text_values[1])
@@ -114,8 +157,21 @@ def parser(filepath: str) -> Map | None:
                                 color = optional_values["color"]
                             if "zone" in optional_values:
                                 zone_access = optional_values["zone"]
-                            if "max_drones" in optional_values:
+                                if zone_access not in VALID_ZONE_TYPES:
+                                    raise ValueError(
+                                        f"Tipo de zona inválido: "
+                                        f"'{zone_access}'. Permitidos: "
+                                        f"{VALID_ZONE_TYPES}"
+                                    )
+                            if ("max_drones" in optional_values and
+                                    zone_type not in ("start_hub", "end_hub")):
                                 max_drones = int(optional_values["max_drones"])
+                                if max_drones <= 0:
+                                    raise ValueError(
+                                        "max_drones debe ser un entero "
+                                        "positivo, encontrado: "
+                                        f"'{max_drones}'"
+                                    )
 
                         zona = Zone(zone_name,
                                     (start_x, start_y),
@@ -138,12 +194,6 @@ def parser(filepath: str) -> Map | None:
             map_obj.add_drone(nuevo_dron)
 
         start_zone_obj = map_obj.get_zone(map_obj.start_zone)
-        if (
-            start_zone_obj.max_drones is not None and
-            nb_drones > start_zone_obj.max_drones
-        ):
-            raise ValueError("El número de drones excede la capacidad "
-                             "del hub de salida.")
         start_zone_obj.current_drones = nb_drones
         map_obj.nb_drones = nb_drones
 

@@ -49,7 +49,10 @@ lint:
 	@echo "== [1/2] Verificando estilo con Flake8 =="
 	$(VENV)/bin/flake8 $(SRC_DIR) --max-line-length=79 --exclude=$(VENV)
 	@echo "== [2/2] Verificando tipado estricto con Mypy =="
-	$(VENV)/bin/mypy $(SRC_DIR) --disallow-untyped-defs --ignore-missing-imports --exclude $(VENV)
+	$(VENV)/bin/mypy $(SRC_DIR) --warn-return-any \
+		--warn-unused-ignores --ignore-missing-imports \
+		--disallow-untyped-defs --check-untyped-defs \
+		--exclude $(VENV)
 
 re: fclean all
 

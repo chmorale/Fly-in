@@ -1,55 +1,29 @@
 #!/usr/bin/env python3
 
-from typing import Optional, List
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from connections import Connection
+    from zones import Zone
 
 
 class Drone:
+    """A drone agent navigating the routing network."""
+
     def __init__(
         self,
         id_dron: str,
         start_zone: Optional[str] = None
-    ):
+    ) -> None:
+        """Initialise a Drone.
+
+        Args:
+            id_dron: Unique identifier (e.g. 'D1', 'D2').
+            start_zone: Name of the zone where the drone begins.
+        """
         self.id_dron = id_dron
-        self.start_zone = start_zone
-        self.current_zone = start_zone
-        self.final_destination: Optional[str] = None
-        self.history: List[str] = [start_zone] if start_zone else []
-        self.status = "waiting"
-        self.route: List[str] = []
-        self.arrived = False
-        self.current_step = 0
-
-    def set_destination(self, destination_zone: str):
-        """Defines the final destination for the dron"""
-        self.final_destination = destination_zone
-
-    def set_route(self, route_list: list):
-        """Asign the calculated route by the algorithm"""
-        self.route = route_list
-        self.current_step = 0
-        if route_list and len(route_list) > 1:
-            self.final_destination = route_list[-1]
-
-    def get_next_target_zone(self) -> Optional[str]:
-        if (not self.route or
-                self.current_step >= len(self.route) - 1):
-            return None
-        return self.route[self.current_step + 1]
-
-    def get_movement_options(self, map_obj) -> list:
-        """Ask the maps for available neighbor zones"""
-        if not self.current_zone:
-            return []
-        return map_obj.get_neighbours(self.current_zone)
-
-    def move_to(self, next_zone: str):
-        """Moves the dron to the next zone and records trace"""
-        self.current_zone = next_zone
-        self.history.append(next_zone)
-        self.current_step += 1
-
-        if next_zone == self.final_destination:
-            self.status = "arrived"
-            self.arrived = True
-        else:
-            self.status = "waiting"
+        self.current_zone: Optional[str] = start_zone
+        self.status: str = "waiting"
+        self.transit_ticks_left: int = 0
+        self.assigned_connection: Optional["Connection"] = None
+        self.target_zone_obj: Optional["Zone"] = None
