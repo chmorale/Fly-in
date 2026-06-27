@@ -1,23 +1,18 @@
+Diagnóstico Técnico de la Arquitectura
+Tu diseño de datos en zones.py es excelente porque prevé el problema al incluir las funciones de reserva, pero la lógica de control del motor en fly-in.py sufre una desconexión al no utilizarlas.
 
-++++++++++
+Para que el sistema sea completamente estricto y no dependa de que los mapas sean lineales o de que las rutas no se crucen, la simulación debe bloquear la plaza en el momento exacto del despegue:
 
-## 3. Desarrollo del Software (Módulo a Módulo)
+Al iniciar el tránsito a zona restringida: Llama a target_zone.reserve_space(). Así, el espacio queda virtualmente asignado.
 
-El simulador se compone principalmente de cuatro piezas que debes programar colocando los archivos en la raíz del repositorio:
+Al evaluar el movimiento de cualquier dron: Sustituye la condición target_zone.has_space() por target_zone.has_space_with_reservation(). Esto evitará que otros drones cuenten esa plaza vacía como disponible.
 
-A. El Parser de Mapas 
+Al aterrizar: Ejecuta target_zone.release_reservation() inmediatamente antes de consolidar la entrada con target_zone.enter_zone().
 
-* Leer archivos de configuración de zonas donde la primera línea indica `nb_drones: <entero>`.
-
-* Validar que exista **exactamente un** `start_hub` (inicio) y **un** `end_hub` (fin).
-
-* Procesar los nombres de zonas (sin espacios ni guiones) , sus coordenadas enteras y metadatos opcionales como `zone`, `color`, `max_drones` y `max_link_capacity`.
-
-* Lanzar errores claros de parsing indicando la línea y la causa si el archivo tiene un formato inválido o tipos de zona incorrectos.
+===================
 
 B. El Motor de Simulación (Reglas de Negocio) 
 
-**Estados de Zona:** Implementar la lógica para zonas `normal` (costo 1 turno) , `restricted` (costo 2 turnos) , `priority` (priorizadas en ruta) y `blocked` (inaccesibles).
 
 **Capacidades:** Controlar turno por turno que ninguna zona supere su `max_drones`  (salvo la salida y la meta, que tienen capacidad ilimitada) y que las conexiones respeten su `max_link_capacity`.
 

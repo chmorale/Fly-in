@@ -37,10 +37,12 @@ def draw_simulation(
     font: pygame.font.Font,
     escala: float,
     frame_count: int,
-    tick: int
+    tick: int,
+    paused: bool = False,
+    sim_speed: int = 1000
 ) -> None:
     """Draw zones, connections, drones and HUD each frame."""
-    MARGIN = 100
+    MARGIN = 150
     ZONE_RADIUS = 22
 
     def to_screen(coords: tuple) -> tuple:
@@ -85,21 +87,21 @@ def draw_simulation(
             ring_color = (int(255 * ratio), int(255 * (1.0 - ratio)), 0)
             pygame.draw.circle(surface, ring_color, pos, ZONE_RADIUS + 5, 3)
 
-        # Zone name
+        # Zone name y ocupación
+        # line_h = font.get_height()
         lbl = font.render(zone_name, True, COLOR_TEXTO)
         lbl_x = pos[0] - lbl.get_width() // 2
-        surface.blit(lbl, (lbl_x, pos[1] + ZONE_RADIUS + 5))
+        surface.blit(lbl, (lbl_x, pos[1] + ZONE_RADIUS + 4))
 
-        # Occupancy
-        if zone.zone_type in ("start_hub", "end_hub"):
-            occ_str = f"{zone.current_drones}/∞"
-        else:
-            occ_str = f"{zone.current_drones}/{zone.max_drones}"
-        occ_lbl = font.render(occ_str, True, COLOR_TEXTO)
-        surface.blit(occ_lbl, (
-            pos[0] - occ_lbl.get_width() // 2,
-            pos[1] + ZONE_RADIUS + 17
-        ))
+        # if zone.zone_type in ("start_hub", "end_hub"):
+        #   # occ_str = f"{zone.current_drones}/∞"
+        # else:
+        #   # occ_str = f"{zone.current_drones}/{zone.max_drones}"
+        # occ_lbl = font.render(occ_str, True, COLOR_TEXTO)
+        # surface.blit(occ_lbl, (
+        #   # pos[0] - occ_lbl.get_width() // 2,
+        #   # pos[1] + ZONE_RADIUS + 4 + line_h
+        # ))
 
     # --- Drones (orbiting their zone — the fun part) ---
     zone_drone_index: dict = {}
@@ -138,9 +140,10 @@ def draw_simulation(
             phase = idx * (2 * math.pi / n)
             angle = frame_count * 0.04 + phase
             orbit_r = ZONE_RADIUS + 14
+            bounce = abs(math.sin(frame_count * 0.08 + phase)) * 8
             drone_pos = (
                 int(center[0] + orbit_r * math.cos(angle)),
-                int(center[1] + orbit_r * math.sin(angle)),
+                int(center[1] + orbit_r * math.sin(angle) - bounce),
             )
             drone_color = COLOR_CYAN
 
@@ -161,6 +164,15 @@ def draw_simulation(
     )
     surface.blit(hud, (10, 10))
 
+    estado = "⏸ PAUSED" if paused else f"▶ {sim_speed}ms/tick"
+    hud2 = font.render(
+        f"{estado}   [SPACE]=pausa  [→]=step  [↑↓]=velocidad "
+        "(clic aqui primero)",
+        True, (200, 200, 100)
+    )
+    # surface.blit(hud2, (10, 26))
+    surface.blit(hud2, (10, 10 + font.get_height() + 4))
+
 
 filepath = sys.argv[1] if len(sys.argv) > 1 else "my_map.txt"
 map_obj = parser(filepath)
@@ -170,21 +182,27 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
     rango_x = map_obj.max_x - map_obj.min_x
     rango_y = map_obj.max_y - map_obj.min_y
 
-    escala_x = 600 / max(rango_x, 1)
-    escala_y = 600 / max(rango_y, 1)
-    escala = min(escala_x, escala_y)
-    escala = min(escala, 120)
+    ancho_ventana = 1400
+    alto_ventana = 800
 
-    ancho_ventana = int((rango_x * escala) + 200)
-    alto_ventana = int((rango_y * escala) + 200)
+    escala_x = (ancho_ventana - 300) / max(rango_x, 1)
+    escala_y = (alto_ventana - 300) / max(rango_y, 1)
+    escala = min(escala_x, escala_y)
+    escala = min(escala, 250)
 
     pygame.init()
     pantalla = pygame.display.set_mode((ancho_ventana, alto_ventana))
     pygame.display.set_caption("Fly-in Drone Simulator")
     reloj = pygame.time.Clock()
     tiempo_acumulado = 0.0
-    font = pygame.font.SysFont("monospace", 11)
+    # font = pygame.font.SysFont("monospace", 16)
+    font = pygame.font.SysFont("monospace", 26)
     frame_count = 0
+
+    # --- CONTROL DE SIMULACIÓN ---
+    paused = False          # Si está pausado
+    step_once = False       # Avanzar exactamente un tick
+    sim_speed = 1000        # Milisegundos entre ticks (por defecto 1 seg)
 
     # Verificación inicial de conectividad física en el mapa
     initial_route = map_obj.find_dynamic_route(
@@ -208,13 +226,30 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 ejecutando = False
+        # --- NUEVOS EVENTOS DE CONTROL ---
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_SPACE:
+                    paused = not paused          # ESPACIO → pausa/reanuda
+
+                elif evento.key == pygame.K_RIGHT:
+                    step_once = True             # → avanza 1 tick manualmente
+                    paused = True                # y se queda pausado
+
+                elif evento.key == pygame.K_UP:
+                    sim_speed = max(100, sim_speed - 200)   # ↑ más rápido
+
+                elif evento.key == pygame.K_DOWN:
+                    sim_speed = min(3000, sim_speed + 200)  # ↓ más lento
 
         # 2. CONTROL DEL TIEMPO: Mide los milisegundos desde el último ciclo
         milisegundos_pasados = reloj.tick(60)
         tiempo_acumulado += milisegundos_pasados
 
         # 3. LÓGICA DE LA SIMULACIÓN: Se dispara solo cuando pasa 1 segundo
-        if tiempo_acumulado >= 1000:
+        tick_ready = tiempo_acumulado >= sim_speed
+        should_tick = (not paused and tick_ready) or step_once
+        step_once = False
+        if should_tick:
 
             arrived_count = sum(
                 1 for d in map_obj.drones.values() if d.status == "arrived"
@@ -229,7 +264,7 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
                 for log in log_outputs:
                     print(log)
                 ejecutando = False
-                tiempo_acumulado -= 1000
+                tiempo_acumulado -= sim_speed
                 continue  # evita que el tick extra borre el resumen
 
             tick += 1
@@ -246,7 +281,8 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
 
                 if mx is None:
                     bar = "████████████████████"
-                    cap_str = f"{curr}/∞"
+                    # cap_str = f"{curr}/∞"
+                    cap_str = ""
                 else:
                     ratio = curr / mx if mx else 0
                     filled_length = min(int(round(20 * ratio)), 20)
@@ -254,7 +290,8 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
                         f"{'█' * filled_length}"
                         f"{'░' * (20 - filled_length)}"
                     )
-                    cap_str = f"{curr}/{mx}"
+                    # cap_str = f"{curr}/{mx}"
+                    cap_str = ""
 
                 z_type = zone.zone_type or "hub"
                 prefix = f"[{z_type.upper()}]"
@@ -375,12 +412,19 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
                 ejecutando = False
 
             sys.stdout.flush()
-            tiempo_acumulado -= 1000
+            tiempo_acumulado -= sim_speed
 
         # Renderizado (cada frame, independiente del tick de simulación)
         frame_count += 1
         pantalla.fill(COLOR_FONDO)
-        draw_simulation(pantalla, map_obj, font, escala, frame_count, tick)
+        draw_simulation(pantalla,
+                        map_obj,
+                        font,
+                        escala,
+                        frame_count,
+                        tick,
+                        paused,
+                        sim_speed)
         pygame.display.flip()
 
     pygame.quit()
