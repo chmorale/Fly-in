@@ -1,11 +1,11 @@
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/01_dead_end_trap.txt
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/01_linear_path.txt
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/01_maze_nightmare.txt
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/01_impossible_dream.txt
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/02_capacity_hell.txt
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/02_circular_loop.txt
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/02_simple_fork.txt
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/03_basic_capacity.txt
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/03_priority_puzzle.txt
-python3 fly-in.py ejemplo/fly_in_maps/maps/all_maps/03_ultimate_challenge.txt
+python3 fly-in.py maps/all_maps/01_dead_end_trap.txt
+python3 fly-in.py maps/all_maps/01_linear_path.txt
+python3 fly-in.py maps/all_maps/01_maze_nightmare.txt
+python3 fly-in.py maps/all_maps/01_impossible_dream.txt
+python3 fly-in.py maps/all_maps/02_capacity_hell.txt
+python3 fly-in.py maps/all_maps/02_circular_loop.txt
+python3 fly-in.py maps/all_maps/02_simple_fork.txt
+python3 fly-in.py maps/all_maps/03_basic_capacity.txt
+python3 fly-in.py maps/all_maps/03_priority_puzzle.txt
+python3 fly-in.py maps/all_maps/03_ultimate_challenge.txt
 

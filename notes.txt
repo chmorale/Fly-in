@@ -1,3 +1,40 @@
+COLORES
+El problema que estás experimentando es muy común cuando se pasa de procesar mapas estándar con reglas fijas a mapas complejos de pruebas de estrés (como este mapa de nivel "Challenger").
+
+Si te fijas en las líneas del archivo de texto, el mapa define los colores explícitamente dentro de los corchetes de cada nodo, utilizando etiquetas dinámicas como [color=purple], [color=brown], [color=orange], [color=maroon], [color=gold], [color=darkred], [color=crimson] e incluso un efecto especial [color=rainbow].
+
+No es una buena solución ampliar tu diccionario de constantes estáticas (ACCESS_COLORS) cada vez que aparezca un mapa nuevo con nombres de colores exóticos. La arquitectura de visualización gráfica en Pygame debe ser capaz de procesar cualquier mapa de forma flexible.
+
+La estrategia adecuada consiste en modificar el enfoque lógico en dos partes:
+
+1. El Parser debe extraer el atributo color dinámicamente
+Cuando tu script recorre el archivo línea por línea parseando los nodos hub:, tu expresión regular o tu lógica de strings no solo debe buscar la zona (zone=restricted), sino también comprobar si existe una subcadena que empiece por color=.
+
+Si el mapa define un color (por ejemplo, color=brown), el parser debe almacenar ese string directamente como una propiedad del objeto o diccionario que represente a ese nodo (por ejemplo, nodo["color_mapa"] = "brown").
+
+2. Implementar una función traductora de Strings a Tuplas RGB
+En lugar de depender únicamente de tu diccionario estático basado en el tipo de acceso (normal, restricted, etc.), debes implementar una función de soporte (helper) encargada de convertir cualquier string con el nombre de un color a su correspondiente tupla (R, G, B) para Pygame.
+
+El orden lógico para decidir de qué color pintar el nodo en pantalla debería seguir esta prioridad:
+
+Paso A: Si el nodo contiene la etiqueta especial color=rainbow, puedes calcular un color cambiante dinámicamente usando el tiempo de Pygame (con la función pygame.time.get_ticks()) transformando coordenadas HSV a RGB para darle un efecto visual único al nodo final.
+
+Paso B: Si el nodo contiene una propiedad de color que coincide con los nombres estándar que vienen en el mapa (brown, maroon, orange, gold, darkred, crimson, black), la función debe devolver la tupla RGB tradicional para esos colores.
+
+Paso C: Si el nodo no especifica ningún color explícito en sus propiedades de mapa, entonces el sistema recurre a tu diccionario por defecto (ACCESS_COLORS) utilizando el tipo de zona (normal, priority, restricted, blocked).
+
+De este modo, tu código no se romperá ni ignorará los estilos visuales cuando cargues mapas altamente personalizados y se verá exactamente como el diseñador del mapa lo planeó.
+--
+en Python existen librerías y enfoques excelentes para resolver esto sin tener que mapear cada color a mano. Dependiendo de si buscas colores estándar o traducciones avanzadas basadas en lenguaje natural, tienes dos opciones principales:
+1. La opción estándar: webcolorsSi los nombres de los colores que aparecen en tus mapas coinciden con los nombres estándar de la especificación web (CSS3 / HTML4), la librería ideal es webcolors.Esta librería traduce nombres en inglés (como "purple", "brown", "gold", "maroon", "crimson", "black") directamente a tuplas RGB.Cómo funciona conceptualmente:La librería expone una función que recibe el string con el nombre del color en inglés. Si el nombre existe en su diccionario interno de especificaciones web, te devuelve directamente un objeto o tupla con sus componentes (Red, Green, Blue). Si el nombre no existe, lanza una excepción (ValueError), lo que te permite capturar el error y asignar tu color de respaldo (COLOR_FONDO o el color por defecto de la zona).Para instalarla en tu entorno usarías: pip install webcolors o poetry add webcolors.
+2. La opción avanzada: matplotlib.colorsSi ya tienes instalado Matplotlib en tu entorno virtual para alguna otra herramienta gráfica o de datos, su módulo de color es increíblemente potente y ya viene integrado.Cómo funciona conceptualmente:Tiene una función de conversión llamada to_rgb() o to_rgba(). Lo interesante de Matplotlib es que no solo reconoce los nombres CSS comunes ("purple", "orange"), sino que también soporta variaciones de intensidad usando prefijos como "darkred" (que aparece en tu mapa), "lightblue", o nomenclaturas extendidas de paletas de diseño (como las de Tableau o XKCD). Al pasarle el string, te devuelve los valores normalizados entre 0 y 1, por lo que solo necesitas multiplicarlos por 255 para tener tu tupla de Pygame.
+Solución limpia con un diccionario propio (Sin dependencias externas)Si prefieres mantener tu proyecto Fly-in ligero y sin añadir nuevas dependencias en tu archivo de configuración de entornos (pyproject.toml), la alternativa más limpia y eficiente es expandir tu estructura actual creando un mapa de traducción directa para los nombres específicos que utilizan tus archivos de texto.Puedes definir un diccionario global de colores por nombre de la siguiente manera:Asocias directamente los strings del mapa con sus valores RGB reales:"green" $\rightarrow$ (46, 204, 113)"red" $\rightarrow$ (231, 76, 60)"purple" $\rightarrow$ (155, 89, 182)"brown" $\rightarrow$ (139, 69, 19)"orange" $\rightarrow$ (230, 126, 34)"maroon" $\rightarrow$ (128, 0, 0)"gold" $\rightarrow$ (241, 196, 15)"darkred" $\rightarrow$ (139, 0, 0)"crimson" $\rightarrow$ (220, 20, 60)"violet" $\rightarrow$ (238, 130, 238)"black" $\rightarrow$ (0, 0, 0)
+La lógica de extracción en tu juego:Cuando tu pantalla vaya a dibujar el nodo, ejecutas una verificación lógica:
+Si el string es "rainbow", calculas el color dinámico con el reloj de Pygame.
+Si el string está en tu diccionario de nombres de colores, usas ese valor RGB.
+Si el string no coincide con ninguno (o el mapa no define color), recurres a tu diccionario actual ACCESS_COLORS basado en el tipo de zona (restricted, priority, etc.).Esta última opción te da control total sobre la estética exacta de cada color en tu interfaz de Pygame para que combine con tu fondo gris oscuro.
+============
+
 Diagnóstico Técnico de la Arquitectura
 Tu diseño de datos en zones.py es excelente porque prevé el problema al incluir las funciones de reserva, pero la lógica de control del motor en fly-in.py sufre una desconexión al no utilizarlas.
 
