@@ -185,10 +185,9 @@ The live GUI renders:
 
 - **Connections**: grey lines whose width scales with
   `max_link_capacity`; turn orange while drones are in transit.
-- **Zone circles**: coloured by access type — blue (normal), red
-  (restricted), purple (priority), grey (blocked), green (start hub),
-  yellow (end hub). A capacity ring graduates from green to red as the
-  zone fills.
+- **Zone circles**: coloured according to the map file and a three-level
+  priority system (see *Colour resolution* below). A capacity ring
+  graduates from green to red as the zone fills.
 - **Waiting drones**: orbit their zone in cyan using a cosine/sine
   animation — the "fun touch".
 - **In-transit drones**: shown as yellow dots at the midpoint of their
@@ -199,3 +198,34 @@ The live GUI renders:
 
 The terminal status panel also updates every tick with a zone occupation
 bar chart and a drone state table.
+
+### Colour resolution
+
+Zone colours are resolved at render time with the following priority:
+
+1. **`color=rainbow`** (special tag): the zone cycles through the full
+   HSV spectrum each second using `pygame.time.get_ticks()`, producing
+   an animated rainbow effect.
+2. **Named colour from the map file** (`color=brown`, `color=crimson`,
+   etc.): resolved via `pygame.Color()`, which accepts any standard CSS
+   colour name. Unknown names fall through to the next level.
+3. **Access-type fallback**: if the map defines no colour, the zone is
+   painted according to its access type — blue (normal), red
+   (restricted), purple (priority), grey (blocked) — or green / yellow
+   for start and end hubs respectively.
+
+### Adaptive background
+
+On startup, `compute_background()` analyses the luminance of every
+colour defined in the map. If any zone colour has luminance below 30, or
+the average luminance across all zones falls below 80, the background
+switches from dark grey `(30, 30, 30)` to light grey `(220, 220, 220)`
+to maintain contrast. Maps with no explicit colours keep the default dark
+background.
+
+### Layout scaling
+
+The canvas uses independent horizontal and vertical scales so that the
+full coordinate range of the map always fills the window on both axes.
+This prevents very wide, shallow maps (large X range, small Y range)
+from compressing zone rows to the point where labels overlap.

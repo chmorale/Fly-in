@@ -31,11 +31,53 @@ ACCESS_COLORS = {
 }
 
 
+def resolve_zone_color(
+    zone_color: str | None,
+    zone_type: str | None,
+    zone_access: str
+) -> tuple[int, int, int]:
+    if zone_color == "rainbow":
+        import colorsys
+        t = pygame.time.get_ticks() / 1000.0
+        r, g, b = colorsys.hsv_to_rgb(t % 1.0, 1.0, 1.0)
+        return (int(r * 255), int(g * 255), int(b * 255))
+    if zone_color:
+        try:
+            c = pygame.Color(zone_color)
+            return (c.r, c.g, c.b)
+        except ValueError:
+            pass
+    if zone_type == "start_hub":
+        return COLOR_VERDE
+    if zone_type == "end_hub":
+        return COLOR_AMARILLO
+    return ACCESS_COLORS.get(zone_access, COLOR_AZUL)
+
+
+def compute_background(map_obj: object) -> tuple[int, int, int]:
+    luminances = []
+    for zone in map_obj.zones.values():  # type: ignore
+        zc = zone.zone_color
+        if zc and zc != "rainbow":
+            try:
+                c = pygame.Color(zc)
+                lum = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b
+                luminances.append(lum)
+            except ValueError:
+                pass
+    if not luminances:
+        return COLOR_FONDO
+    if min(luminances) < 30 or sum(luminances) / len(luminances) < 80:
+        return (220, 220, 220)
+    return COLOR_FONDO
+
+
 def draw_simulation(
     surface: pygame.Surface,
     map_obj: object,
     font: pygame.font.Font,
-    escala: float,
+    escala_x: float,
+    escala_y: float,
     frame_count: int,
     tick: int,
     paused: bool = False,
@@ -47,8 +89,8 @@ def draw_simulation(
 
     def to_screen(coords: tuple) -> tuple:
         """Convert grid coordinates to screen pixel position."""
-        x = int((coords[0] - map_obj.min_x) * escala) + MARGIN  # type: ignore
-        y = int((coords[1] - map_obj.min_y) * escala) + MARGIN  # type: ignore
+        x = int((coords[0] - map_obj.min_x) * escala_x) + MARGIN  # type: ignore
+        y = int((coords[1] - map_obj.min_y) * escala_y) + MARGIN  # type: ignore
         return (x, y)
 
     # --- Connections ---
@@ -71,12 +113,9 @@ def draw_simulation(
     for zone_name, zone in map_obj.zones.items():  # type: ignore
         pos = to_screen(zone.coordinates)
 
-        if zone.zone_type == "start_hub":
-            color = COLOR_VERDE
-        elif zone.zone_type == "end_hub":
-            color = COLOR_AMARILLO
-        else:
-            color = ACCESS_COLORS.get(zone.zone_access, COLOR_AZUL)
+        color = resolve_zone_color(
+            zone.zone_color, zone.zone_type, zone.zone_access
+        )
 
         pygame.draw.circle(surface, color, pos, ZONE_RADIUS)
         pygame.draw.circle(surface, COLOR_TEXTO, pos, ZONE_RADIUS, 2)
@@ -176,6 +215,7 @@ def draw_simulation(
 
 filepath = sys.argv[1] if len(sys.argv) > 1 else "my_map.txt"
 map_obj = parser(filepath)
+bg_color = compute_background(map_obj) if map_obj else COLOR_FONDO
 
 if map_obj and map_obj.start_zone and map_obj.end_zone:
 
@@ -185,10 +225,8 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
     ancho_ventana = 1400
     alto_ventana = 800
 
-    escala_x = (ancho_ventana - 300) / max(rango_x, 1)
-    escala_y = (alto_ventana - 300) / max(rango_y, 1)
-    escala = min(escala_x, escala_y)
-    escala = min(escala, 250)
+    escala_x = min((ancho_ventana - 300) / max(rango_x, 1), 250)
+    escala_y = min((alto_ventana - 300) / max(rango_y, 1), 250)
 
     pygame.init()
     pantalla = pygame.display.set_mode((ancho_ventana, alto_ventana))
@@ -416,11 +454,12 @@ if map_obj and map_obj.start_zone and map_obj.end_zone:
 
         # Renderizado (cada frame, independiente del tick de simulación)
         frame_count += 1
-        pantalla.fill(COLOR_FONDO)
+        pantalla.fill(bg_color)
         draw_simulation(pantalla,
                         map_obj,
                         font,
-                        escala,
+                        escala_x,
+                        escala_y,
                         frame_count,
                         tick,
                         paused,
