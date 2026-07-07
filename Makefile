@@ -25,12 +25,12 @@ $(VENV)/bin/activate: requirements.txt
 	@touch $(VENV)/bin/activate
 
 # 2. Ejecutar el script principal del simulador
-run:
+run: install
 	@echo "Iniciando la simulación gráfica de Fly-in con Pygame..."
 	$(PYTHON) $(MAIN) $(MAP)
 
 # 3. Ejecutar en modo depuración interactiva (pdb)
-debug:
+debug: install
 	@echo "Iniciando depurador interactivo (PDB)..."
 	$(PYTHON) -m pdb $(MAIN) $(MAP)
 
@@ -46,7 +46,7 @@ fclean: clean
 	rm -rf $(VENV)
 
 # 5. Verificación estricta de linter y tipado estático
-lint:
+lint: install
 	@echo "== [1/2] Verificando estilo con Flake8 =="
 	$(VENV)/bin/flake8 $(SRC_DIR) --max-line-length=79 --exclude=$(VENV)
 	@echo "== [2/2] Verificando tipado estricto con Mypy =="
