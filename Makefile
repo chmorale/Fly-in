@@ -32,7 +32,7 @@ run:
 # 3. Ejecutar en modo depuración interactiva (pdb)
 debug:
 	@echo "Iniciando depurador interactivo (PDB)..."
-	$(PYTHON) -m pdb $(MAIN)
+	$(PYTHON) -m pdb $(MAIN) $(MAP)
 
 # 4. Limpieza absoluta de residuos de caché y temporales
 clean:

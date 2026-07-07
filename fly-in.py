@@ -8,30 +8,6 @@ from parser import Parser
 from map import Map
 
 
-# ============================================================================
-# CONSTANTES GRÁFICAS (COLORES RGB)
-# ============================================================================
-COLOR_FONDO = pygame.Color("gray12")  # Gris muy oscuro evita fatiga visual
-COLOR_LINEA = pygame.Color("gray59")  # Gris claro para los caminos/conexiones
-COLOR_TEXTO = pygame.Color("white")   # Blanco para las etiquetas de texto
-
-# Colores de las zonas según el enunciado o su estado
-COLOR_VERDE = pygame.Color("green")  # Hubs de inicio/fin o alta capacidad
-COLOR_ROJO = pygame.Color("red")  # Para zonas saturadas o bloqueadas
-COLOR_AMARILLO = pygame.Color("yellow")  # Para zonas con restricciones
-COLOR_AZUL = pygame.Color("blue")  # Para los drones y rutas prioritarias
-COLOR_PURPURA = pygame.Color("purple")  # Para zonas priority
-COLOR_GRIS = pygame.Color("gray31")  # Para zonas blocked
-COLOR_CYAN = pygame.Color("cyan")  # Color de los drones en espera
-
-ACCESS_COLORS = {
-    "normal":     COLOR_AZUL,
-    "restricted": COLOR_ROJO,
-    "priority":   COLOR_PURPURA,
-    "blocked":    COLOR_GRIS,
-}
-
-
 class Draw_simul:
 
     def __init__(self) -> None:
@@ -73,10 +49,7 @@ class Draw_simul:
                 p1 = to_screen(z1.coordinates)
                 p2 = to_screen(z2.coordinates)
                 width = max(2, conn.max_capacity * 2)
-                color = (
-                    pygame.Color("orange")
-                    if conn.current_drones > 0
-                    else COLOR_LINEA)
+                color = conn.color
                 pygame.draw.line(surface, color, p1, p2, width)
 
         # --- Zones ---
@@ -88,12 +61,15 @@ class Draw_simul:
                     color_zona = pygame.Color(zone.zone_color)
                 except ValueError:
                     print(f"ERROR: color '{zone.zone_color}' ivalido.")
-                    color_zona = ACCESS_COLORS.get(
-                        zone.zone_access, COLOR_GRIS)
+                    color_zona = zone.color
             else:
-                color_zona = ACCESS_COLORS.get(zone.zone_access, COLOR_GRIS)
+                color_zona = zone.color
             pygame.draw.circle(surface, color_zona, pos, ZONE_RADIUS)
-            pygame.draw.circle(surface, COLOR_TEXTO, pos, ZONE_RADIUS, 2)
+            pygame.draw.circle(surface,
+                               pygame.Color("white"),
+                               pos,
+                               ZONE_RADIUS,
+                               2)
 
             # Capacity ring: green → red as zone fills up
             if zone.zone_type not in (
@@ -110,7 +86,7 @@ class Draw_simul:
                     pos, ZONE_RADIUS + 5, 3)
 
             # Zone name y ocupación
-            lbl = font.render(zone_name, True, COLOR_TEXTO)
+            lbl = font.render(zone_name, True, pygame.Color("white"))
             lbl_x = pos[0] - lbl.get_width() // 2
             surface.blit(lbl, (lbl_x, pos[1] + ZONE_RADIUS + 4))
 
@@ -134,7 +110,7 @@ class Draw_simul:
                 offset_x = (idx % 5) * 10 - 20
                 offset_y = (idx // 5) * 10
                 dot_pos = (center[0] + offset_x, center[1] + offset_y)
-                pygame.draw.circle(surface, COLOR_VERDE, dot_pos, 4)
+                pygame.draw.circle(surface, pygame.Color("green"), dot_pos, 4)
                 continue
 
             if drone.status == "in_transit" and drone.target_zone_obj:
@@ -159,7 +135,7 @@ class Draw_simul:
                 drone_color = pygame.Color("cyan")
 
             pygame.draw.circle(surface, drone_color, drone_pos, 5)
-            pygame.draw.circle(surface, COLOR_TEXTO, drone_pos, 5, 1)
+            pygame.draw.circle(surface, pygame.Color("white"), drone_pos, 5, 1)
             id_lbl = font.render(drone.id_dron, True, drone_color)
             surface.blit(id_lbl, (drone_pos[0] + 7, drone_pos[1] - 5))
 
@@ -171,7 +147,7 @@ class Draw_simul:
         nb = map_obj.nb_drones
         hud = fontg.render(
             f"Tick: {tick}   Delivered: {arrived}/{nb}",
-            True, COLOR_TEXTO
+            True, pygame.Color("white")
         )
         surface.blit(hud, (10, 10))
 
@@ -180,7 +156,6 @@ class Draw_simul:
             f"{estado}   [SPACE]=pausa  [→]=step  (clic aqui primero)",
             True, (200, 200, 100)
         )
-        # surface.blit(hud2, (10, 26))
         surface.blit(hud2, (10, 10 + fontg.get_height() + 4))
 
 
@@ -195,13 +170,10 @@ class DroneSimulation:
         """
         self.map_obj = map_obj
         self.clock = pygame.time.Clock()
-
         rango_x = map_obj.max_x - map_obj.min_x
         rango_y = map_obj.max_y - map_obj.min_y
-
         self.ancho_ventana = 1400
         self.alto_ventana = 800
-
         self.escala_x = min(
             (self.ancho_ventana - 300) / max(rango_x, 1), 250
         )
@@ -258,7 +230,7 @@ class DroneSimulation:
             for log in self.log_outputs:
                 print(log)
             self.paused = True
-            return  # antes era "continue"; acá cortamos el método
+            return
 
         self.tick += 1
         print("\033[2J\033[H", end="")
@@ -423,7 +395,7 @@ class DroneSimulation:
     def render(self) -> None:
         """Draw the current simulation state to the screen."""
         self.frame_count += 1
-        self.pantalla.fill(COLOR_FONDO)
+        self.pantalla.fill(pygame.Color("gray12"))  # color fondo
         Draw_simul.draw_simulation(
             self.pantalla,
             self.map_obj,

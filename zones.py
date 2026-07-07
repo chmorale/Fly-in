@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from typing import Optional
+import pygame
 
 
 class Zone:
@@ -38,9 +39,17 @@ class Zone:
         self.reserved_spaces: int = 0
 
     @property
-    def is_full(self) -> bool:
-        """Return True if the zone has no space left."""
-        return not self.has_space()
+    def color(self) -> pygame.Color:
+        """Return a dinamic color based on the zone type"""
+        if self.zone_access == "normal":
+            return pygame.Color("blue")
+        elif self.zone_access == "restricted":
+            return pygame.Color("red")
+        elif self.zone_access == "priority":
+            return pygame.Color("purple")
+        elif self.zone_access == "blocked":
+            return pygame.Color("gray31")
+        return pygame.Color("blue")
 
     def has_space(self) -> bool:
         """Return True if the zone can accept one more drone."""
